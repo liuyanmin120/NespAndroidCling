@@ -13,7 +13,7 @@ public class Config {
     // ts 格式
 //    public static String TEST_URL = "http://ottvideows.hifuntv.com/b36ea6f167c7b5785f3aa46c47b6d983/595f51c1/internettv/c1/2017/03/29/41E0B7C03C15AD472DB008A5FF4566EB.ts?uuid=0c18530ecda4454db49665b178396ff7";
     // m3u8 格式
-    public static String TEST_URL = "https://acfun.iqiyi-kuyun.com/20181001/q1E2Hf9S/index.m3u8";
+    public static String TEST_URL = "http://playertest.longtailvideo.com/adaptive/bipbop/gear4/prog_index.m3u8";
 
     /*** 因为后台给的地址是固定的，如果不测试投屏，请设置为 false*/
     public static final boolean DLAN_DEBUG = true;
