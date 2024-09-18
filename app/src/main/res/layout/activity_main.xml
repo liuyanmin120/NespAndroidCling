@@ -6,7 +6,8 @@
     android:layout_height="match_parent"
     tools:context="com.nesp.android.clingdemo.MainActivity"
     android:orientation="vertical"
-    android:background="@android:color/white">
+    android:background="@android:color/white"
+        android:layout_margin="20px">
 
     <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
         android:id="@+id/srl_refresh"
@@ -43,7 +44,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+            android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -61,7 +63,8 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="30dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+            android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
