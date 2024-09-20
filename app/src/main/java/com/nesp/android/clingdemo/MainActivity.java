@@ -1,7 +1,9 @@
 package com.nesp.android.clingdemo;
 
+import android.Manifest;
 import android.content.*;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -10,6 +12,15 @@ import android.view.View;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+
+import com.arthenica.ffmpegkit.FFmpegSession;
+import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback;
+import com.arthenica.ffmpegkit.Level;
+import com.arthenica.ffmpegkit.LogCallback;
+import com.arthenica.ffmpegkit.ReturnCode;
+import com.arthenica.ffmpegkit.SessionState;
+import com.arthenica.ffmpegkit.Statistics;
+import com.arthenica.ffmpegkit.StatisticsCallback;
 import com.nesp.android.cling.Config;
 import com.nesp.android.cling.Intents;
 import com.nesp.android.cling.control.ClingPlayControl;
@@ -24,7 +35,13 @@ import com.nesp.android.cling.service.manager.DeviceManager;
 import com.nesp.android.cling.util.Utils;
 import org.fourthline.cling.model.meta.Device;
 
+import java.io.File;
 import java.util.Collection;
+
+import com.arthenica.ffmpegkit.FFmpegKit;
+
+import pub.devrel.easypermissions.EasyPermissions;
+
 
 public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, SeekBar.OnSeekBarChangeListener {
 
@@ -41,6 +58,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     public static final int GET_POSITION_INFO_ACTION = 0xa5;
     /** 投放失败 */
     public static final int ERROR_ACTION = 0xa5;
+
+
+    private static final String[] REQUESTED_PERMISSIONS = { Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
+
+    private static final int PERMISSION_REQ_ID = 100;
+
+    private String downloadPath;
 
     private Context mContext;
     private Handler mHandler = new InnerHandler();
@@ -113,6 +137,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         setContentView(R.layout.activity_main);
         mContext = this;
 
+        downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
+
         initView();
         initListeners();
         bindServices();
@@ -153,6 +179,14 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         ClingManager.getInstance().destroy();
         ClingDeviceList.getInstance().destroy();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        // Forward results to EasyPermissions
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
     private void initView() {
@@ -255,6 +289,14 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     public void onClick(View view) {
         int id = view.getId();
         switch (id) {
+            case R.id.bt_download:
+                download();
+                break;
+
+            case R.id.bt_addMark:
+                addMark();
+                break;
+
             case R.id.bt_play:
                 play();
                 break;
@@ -269,6 +311,54 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         }
     }
 
+    private void download() {
+        if (EasyPermissions.hasPermissions(this, REQUESTED_PERMISSIONS)) {
+
+            File dir = new File(downloadPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 " + dir.toString() + "/test.mp4";
+            FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
+
+                @Override
+                public void apply(FFmpegSession session) {
+                    SessionState state = session.getState();
+                    ReturnCode returnCode = session.getReturnCode();
+
+                    // CALLED WHEN SESSION IS EXECUTED
+
+                    Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
+                }
+            }, new LogCallback() {
+
+                @Override
+                public void apply(com.arthenica.ffmpegkit.Log log) {
+                    if (log.getLevel().getValue() < Level.AV_LOG_INFO.getValue()) {
+                        Log.d(TAG, String.format("ffmpeg print %s", log.toString()));
+                    }
+                }
+            }, new StatisticsCallback() {
+
+                @Override
+                public void apply(Statistics statistics) {
+
+                    // CALLED WHEN SESSION GENERATES STATISTICS
+
+                }
+            });
+
+        } else {
+            // 没有申请过权限，现在去申请
+            EasyPermissions.requestPermissions(this, "请点击确定允许存储权限",
+                    PERMISSION_REQ_ID, REQUESTED_PERMISSIONS);
+        }
+
+    }
+
+    private void addMark() {
+
+    }
     /**
      * 停止
      */
@@ -332,7 +422,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
          * 通过判断状态 来决定 是继续播放 还是重新播放
          */
 
-        if (currentState == DLANPlayState.STOP) {
+        if (currentState == DLANPlayState.STOP || true) {
             mClingPlayControl.playNew(Config.TEST_URL, new ControlCallback() {
 
                 @Override

@@ -41,5 +41,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0-alpha01'
     implementation project(path: ':NespCling')
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
-    implementation 'com.arthenica:ffmpeg-kit-full:4.5'
+
+    implementation 'com.arthenica:ffmpeg-kit-full:4.5.1'
+    implementation 'pub.devrel:easypermissions:3.0.0'
 }
