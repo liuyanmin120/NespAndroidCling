@@ -318,7 +318,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 " + dir.toString() + "/test.mp4";
+            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v mpeg4 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename " + dir.toString() + "/'output%06d.ts' " + dir.toString() + "/output.m3u8";
+            //sCommand = " -codecs";
+            Log.d(TAG, String.format("ffmpeg command %s", sCommand));
             FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
 
                 @Override
@@ -329,14 +331,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     // CALLED WHEN SESSION IS EXECUTED
 
                     Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
+
+                    Log.d(TAG, String.format("%s", session.getOutput()));
                 }
             }, new LogCallback() {
 
                 @Override
                 public void apply(com.arthenica.ffmpegkit.Log log) {
-                    if (log.getLevel().getValue() < Level.AV_LOG_INFO.getValue()) {
-                        Log.d(TAG, String.format("ffmpeg print %s", log.toString()));
-                    }
                 }
             }, new StatisticsCallback() {
 
