@@ -5,11 +5,11 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 30
     defaultConfig {
         applicationId "com.nesp.android.cling"
-        minSdkVersion 21
-        targetSdkVersion 28
+        minSdkVersion 24
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
         compileOptions {
@@ -41,4 +41,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0-alpha01'
     implementation project(path: ':NespCling')
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
+    implementation 'com.arthenica:ffmpeg-kit-full:4.5'
 }
