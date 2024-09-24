@@ -2,6 +2,12 @@ package com.nesp.android.clingdemo;
 
 import android.Manifest;
 import android.content.*;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -36,6 +42,8 @@ import com.nesp.android.cling.util.Utils;
 import org.fourthline.cling.model.meta.Device;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Collection;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
@@ -294,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                 break;
 
             case R.id.bt_addMark:
-                addMark();
+                addHlsMark();
                 break;
 
             case R.id.bt_play:
@@ -318,37 +326,29 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v mpeg4 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename " + dir.toString() + "/'output%06d.ts' " + dir.toString() + "/output.m3u8";
+            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v mpeg4 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
+                    + dir.toString() + "/'output%06d.ts' " + dir.toString() + "/output.m3u8";
             //sCommand = " -codecs";
             Log.d(TAG, String.format("ffmpeg command %s", sCommand));
             FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
-
                 @Override
                 public void apply(FFmpegSession session) {
                     SessionState state = session.getState();
                     ReturnCode returnCode = session.getReturnCode();
-
                     // CALLED WHEN SESSION IS EXECUTED
-
                     Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
-
                     Log.d(TAG, String.format("%s", session.getOutput()));
                 }
             }, new LogCallback() {
-
                 @Override
                 public void apply(com.arthenica.ffmpegkit.Log log) {
                 }
             }, new StatisticsCallback() {
-
                 @Override
                 public void apply(Statistics statistics) {
-
                     // CALLED WHEN SESSION GENERATES STATISTICS
-
                 }
             });
-
         } else {
             // 没有申请过权限，现在去申请
             EasyPermissions.requestPermissions(this, "请点击确定允许存储权限",
@@ -357,8 +357,82 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     }
 
-    private void addMark() {
+    // 方法：创建水印图片并保存
+    private boolean makeWaterMarkImageFile(Context context, String text, String filePath, int fontSize, int textColor) {
+        // 初始化Paint对象
+        Paint paint = new Paint();
+        paint.setColor(textColor); // 文本颜色
+        paint.setTextSize(fontSize); // 字体大小
+        paint.setAntiAlias(true); // 抗锯齿
+        paint.setTypeface(Typeface.DEFAULT); // 字体样式
 
+        // 计算文本宽度和高度
+        float baseline = -paint.ascent(); // ascent() is negative
+        Rect bounds = new Rect();
+        paint.getTextBounds(text, 0, text.length(), bounds);
+        int textWidth = bounds.width();
+        int textHeight = (int) (baseline + paint.descent());
+
+        // 创建一个足够大的Bitmap
+        Bitmap bitmap = Bitmap.createBitmap(textWidth + 20, textHeight + 20, Bitmap.Config.ARGB_8888); // +20是为了给文本周围留点空间
+
+        // 创建一个Canvas来绘制Bitmap
+        Canvas canvas = new Canvas(bitmap);
+
+        // 绘制文本
+        canvas.drawText(text, 10, baseline + 10, paint); // 文本位置稍微偏移一点
+
+        // 保存Bitmap到文件
+        File file = new File(filePath);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
+            fos.flush();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private void addHlsMark() {
+        String fileMark = downloadPath + "/waterMark.png";
+        boolean success = makeWaterMarkImageFile(this, "水印文本", fileMark, 40, Color.GRAY);
+        if (!success) {
+            return;
+        }
+        // 假设 downloadPath 是你的文件目录
+        File dir = new File(downloadPath);
+        File[] files = dir.listFiles((dir1, name) -> name.matches("output\\d{6}\\.ts"));
+
+        if (files != null) {
+            for (int i = 0; i < files.length; i++) {
+                if ((i + 1) % 3 == 0) { // 每隔3个文件处理一次
+                    File sourceFile = files[i];
+                    File tempFile = new File(downloadPath, "temp.ts");
+                    // 构造 FFmpeg 命令
+                    String sCommand = String.format("-y -i \"%s\" -i \"%s\" -filter_complex \"overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))'\" \"%s\"",
+                            sourceFile.getAbsolutePath(), fileMark, tempFile.getAbsolutePath());
+                    Log.d(TAG, String.format("ffmpeg command %s", sCommand));
+                    // 执行 FFmpeg 命令（这里使用 FFmpegKit）
+                    FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
+                        @Override
+                        public void apply(FFmpegSession session) {
+                            SessionState state = session.getState();
+                            ReturnCode returnCode = session.getReturnCode();
+                            // CALLED WHEN SESSION IS EXECUTED
+                            Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
+                            Log.d(TAG, String.format("%s", session.getOutput()));
+                            if (returnCode.getValue() == ReturnCode.SUCCESS) {
+                                // 删除原始文件
+                                sourceFile.delete();
+                                // 重命名临时文件为原始文件名
+                                tempFile.renameTo(sourceFile);
+                            }
+                        }
+                    });
+                }
+            }
+        }
     }
     /**
      * 停止
