@@ -42,6 +42,6 @@ dependencies {
     implementation project(path: ':NespCling')
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.0.0'
 
-    implementation 'com.arthenica:ffmpeg-kit-full:4.5.1'
+    implementation 'com.github.microshow:RxFFmpeg:4.9.0'
     implementation 'pub.devrel:easypermissions:3.0.0'
 }

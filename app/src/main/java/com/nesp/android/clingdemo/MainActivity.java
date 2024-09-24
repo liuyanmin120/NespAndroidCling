@@ -19,14 +19,6 @@ import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
-import com.arthenica.ffmpegkit.FFmpegSession;
-import com.arthenica.ffmpegkit.FFmpegSessionCompleteCallback;
-import com.arthenica.ffmpegkit.Level;
-import com.arthenica.ffmpegkit.LogCallback;
-import com.arthenica.ffmpegkit.ReturnCode;
-import com.arthenica.ffmpegkit.SessionState;
-import com.arthenica.ffmpegkit.Statistics;
-import com.arthenica.ffmpegkit.StatisticsCallback;
 import com.nesp.android.cling.Config;
 import com.nesp.android.cling.Intents;
 import com.nesp.android.cling.control.ClingPlayControl;
@@ -46,8 +38,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collection;
 
-import com.arthenica.ffmpegkit.FFmpegKit;
 
+import io.microshow.rxffmpeg.RxFFmpegInvoke;
 import pub.devrel.easypermissions.EasyPermissions;
 
 
@@ -145,12 +137,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         setContentView(R.layout.activity_main);
         mContext = this;
 
-        downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
-
         initView();
         initListeners();
         bindServices();
         registerReceivers();
+
+        RxFFmpegInvoke.getInstance().setDebug(true);
+        downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
     }
 
     private void registerReceivers() {
@@ -326,29 +319,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String sCommand = "-i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v mpeg4 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
-                    + dir.toString() + "/'output%06d.ts' " + dir.toString() + "/output.m3u8";
+            String sCommand = "ffmpeg -y -i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v libx264 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
+                    + dir.toString() + "/output%06d.ts " + dir.toString() + "/output.m3u8";
             //sCommand = " -codecs";
+            String[] commands = sCommand.split(" ");
             Log.d(TAG, String.format("ffmpeg command %s", sCommand));
-            FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
-                @Override
-                public void apply(FFmpegSession session) {
-                    SessionState state = session.getState();
-                    ReturnCode returnCode = session.getReturnCode();
-                    // CALLED WHEN SESSION IS EXECUTED
-                    Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
-                    Log.d(TAG, String.format("%s", session.getOutput()));
-                }
-            }, new LogCallback() {
-                @Override
-                public void apply(com.arthenica.ffmpegkit.Log log) {
-                }
-            }, new StatisticsCallback() {
-                @Override
-                public void apply(Statistics statistics) {
-                    // CALLED WHEN SESSION GENERATES STATISTICS
-                }
-            });
+            RxFFmpegInvoke.getInstance().runCommand(commands, null);
+
         } else {
             // 没有申请过权限，现在去申请
             EasyPermissions.requestPermissions(this, "请点击确定允许存储权限",
@@ -406,30 +383,20 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         if (files != null) {
             for (int i = 0; i < files.length; i++) {
-                if ((i + 1) % 3 == 0) { // 每隔3个文件处理一次
+                if (i % 3 == 0) { // 每隔3个文件处理一次
                     File sourceFile = files[i];
                     File tempFile = new File(downloadPath, "temp.ts");
                     // 构造 FFmpeg 命令
-                    String sCommand = String.format("-y -i \"%s\" -i \"%s\" -filter_complex \"overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))'\" \"%s\"",
+                    String sCommand = String.format("-y -i %s -i %s -filter_complex overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))' %s",
                             sourceFile.getAbsolutePath(), fileMark, tempFile.getAbsolutePath());
+                    String[] commands = sCommand.split(" ");
                     Log.d(TAG, String.format("ffmpeg command %s", sCommand));
-                    // 执行 FFmpeg 命令（这里使用 FFmpegKit）
-                    FFmpegKit.executeAsync(sCommand, new FFmpegSessionCompleteCallback() {
-                        @Override
-                        public void apply(FFmpegSession session) {
-                            SessionState state = session.getState();
-                            ReturnCode returnCode = session.getReturnCode();
-                            // CALLED WHEN SESSION IS EXECUTED
-                            Log.d(TAG, String.format("ffmpeg process exited with state %s and ret %s.%s", state, returnCode, session.getFailStackTrace()));
-                            Log.d(TAG, String.format("%s", session.getOutput()));
-                            if (returnCode.getValue() == ReturnCode.SUCCESS) {
-                                // 删除原始文件
-                                sourceFile.delete();
-                                // 重命名临时文件为原始文件名
-                                tempFile.renameTo(sourceFile);
-                            }
-                        }
-                    });
+                    RxFFmpegInvoke.getInstance().runCommand(commands, null);
+                    // 删除原始文件
+                    sourceFile.delete();
+                    // 重命名临时文件为原始文件名
+                    tempFile.renameTo(sourceFile);
+
                 }
             }
         }
