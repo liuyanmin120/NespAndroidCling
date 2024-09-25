@@ -72,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     private Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    private LocalHttpServer httpServer;
+
     private ListView mDeviceList;
     private SwipeRefreshLayout mRefreshLayout;
     private TextView mTVSelected;
@@ -146,9 +148,25 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         bindServices();
         registerReceivers();
 
+        initLocalVideo();
+    }
+
+    private void initLocalVideo() {
         RxFFmpegInvoke.getInstance().setDebug(true);
         downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
-        Log.i(TAG, "downloadPath " + downloadPath);
+        // 服务器端口
+        int port = 22120;
+
+        // 创建服务器实例
+        httpServer = new LocalHttpServer(this, port, downloadPath);
+
+        try {
+            httpServer.start();
+            Log.i(TAG,  String.format("http server port %d path %s", port, downloadPath));
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.e(TAG,  String.format("http server failed %s", e.toString()));
+        }
     }
 
     private void registerReceivers() {
@@ -325,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String sCommand = "ffmpeg -y -i http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8 -c:v libx264 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
+            String sCommand = "ffmpeg -y -i https://dist.qianxueyunke.com/data/User/admin/home/%E5%AE%89%E8%A3%85%E5%8C%85/share/output.mp4 -c:v libx264 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
                     + dir.toString() + "/output%06d.ts " + dir.toString() + "/output.m3u8";
             //sCommand = " -codecs";
             String[] commands = sCommand.split(" ");
