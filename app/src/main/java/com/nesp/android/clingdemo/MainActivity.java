@@ -12,6 +12,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
@@ -69,12 +70,15 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private Context mContext;
     private Handler mHandler = new InnerHandler();
 
+    private Handler mainHandler = new Handler(Looper.getMainLooper());
+
     private ListView mDeviceList;
     private SwipeRefreshLayout mRefreshLayout;
     private TextView mTVSelected;
     private SeekBar mSeekProgress;
     private SeekBar mSeekVolume;
     private Switch mSwitchMute;
+    private EditText mEdtMark;
 
     private BroadcastReceiver mTransportStateBroadcastReceiver;
     private ArrayAdapter<ClingDevice> mDevicesAdapter;
@@ -197,6 +201,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mSeekProgress = findViewById(R.id.seekbar_progress);
         mSeekVolume = findViewById(R.id.seekbar_volume);
         mSwitchMute = findViewById(R.id.sw_mute);
+        mEdtMark = findViewById(R.id.textMark);
 
         mDevicesAdapter = new DevicesAdapter(mContext);
         mDeviceList.setAdapter(mDevicesAdapter);
@@ -324,14 +329,39 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             //sCommand = " -codecs";
             String[] commands = sCommand.split(" ");
             Log.d(TAG, String.format("ffmpeg command %s", sCommand));
-            RxFFmpegInvoke.getInstance().runCommand(commands, null);
+            RxFFmpegInvoke.getInstance().runCommandAsync(commands, new RxFFmpegInvoke.IFFmpegListener() {
+                @Override
+                public void onFinish() {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "下载完成", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+                @Override
+                public void onProgress(int progress, long progressTime) {
 
+                }
+                @Override
+                public void onCancel() {
+
+                }
+                @Override
+                public void onError(String message) {
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this, "下载失败: " + message, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
         } else {
             // 没有申请过权限，现在去申请
             EasyPermissions.requestPermissions(this, "请点击确定允许存储权限",
                     PERMISSION_REQ_ID, REQUESTED_PERMISSIONS);
         }
-
     }
 
     // 方法：创建水印图片并保存
@@ -372,9 +402,15 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     }
 
     private void addHlsMark() {
+        String textMark = mEdtMark.getText().toString();
+        if (textMark.isEmpty()) {
+            Toast.makeText(MainActivity.this, "水印内容不能为空", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String fileMark = downloadPath + "/waterMark.png";
-        boolean success = makeWaterMarkImageFile(this, "水印文本", fileMark, 40, Color.GRAY);
+        boolean success = makeWaterMarkImageFile(this, textMark, fileMark, 40, Color.GRAY);
         if (!success) {
+            Toast.makeText(MainActivity.this, "创建水印失败", Toast.LENGTH_SHORT).show();
             return;
         }
         // 假设 downloadPath 是你的文件目录
@@ -382,20 +418,41 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         File[] files = dir.listFiles((dir1, name) -> name.matches("output\\d{6}\\.ts"));
 
         if (files != null) {
+            File tempFile = new File(downloadPath, "temp.ts");
             for (int i = 0; i < files.length; i++) {
                 if (i % 3 == 0) { // 每隔3个文件处理一次
                     File sourceFile = files[i];
-                    File tempFile = new File(downloadPath, "temp.ts");
                     // 构造 FFmpeg 命令
                     String sCommand = String.format("-y -i %s -i %s -filter_complex overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))' %s",
                             sourceFile.getAbsolutePath(), fileMark, tempFile.getAbsolutePath());
                     String[] commands = sCommand.split(" ");
                     Log.d(TAG, String.format("ffmpeg command %s", sCommand));
-                    RxFFmpegInvoke.getInstance().runCommand(commands, null);
-                    // 删除原始文件
-                    sourceFile.delete();
-                    // 重命名临时文件为原始文件名
-                    tempFile.renameTo(sourceFile);
+                    RxFFmpegInvoke.getInstance().runCommand(commands, new RxFFmpegInvoke.IFFmpegListener() {
+                        @Override
+                        public void onFinish() {
+                            // 删除原始文件
+                            sourceFile.delete();
+                            // 重命名临时文件为原始文件名
+                            tempFile.renameTo(sourceFile);
+                        }
+                        @Override
+                        public void onProgress(int progress, long progressTime) {
+
+                        }
+                        @Override
+                        public void onCancel() {
+
+                        }
+                        @Override
+                        public void onError(String message) {
+                            mainHandler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Toast.makeText(MainActivity.this, "下载失败: " + message, Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                        }
+                    });
 
                 }
             }
