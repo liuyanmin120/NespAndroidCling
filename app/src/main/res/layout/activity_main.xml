@@ -105,6 +105,7 @@
                 android:layout_marginEnd="10dp"
                 android:layout_marginBottom="10dp"
                 android:hint="@string/markPlaceholder"
+                android:text="@string/markPlaceholder"
                 android:singleLine="true" />
 
     </LinearLayout>

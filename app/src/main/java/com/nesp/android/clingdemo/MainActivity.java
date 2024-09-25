@@ -148,6 +148,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         RxFFmpegInvoke.getInstance().setDebug(true);
         downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
+        Log.i(TAG, "downloadPath " + downloadPath);
     }
 
     private void registerReceivers() {
