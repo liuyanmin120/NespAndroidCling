@@ -8,6 +8,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.Typeface;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -72,7 +73,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     private Handler mainHandler = new Handler(Looper.getMainLooper());
 
+    private int nHttpPort = 22120;
     private LocalHttpServer httpServer;
+
 
     private ListView mDeviceList;
     private SwipeRefreshLayout mRefreshLayout;
@@ -162,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
         try {
             httpServer.start();
-            Log.i(TAG,  String.format("http server port %d path %s", port, downloadPath));
+            Log.i(TAG,  String.format("http server port %d path %s url %s", port, downloadPath, getAddressPlayUrl(this)));
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG,  String.format("http server failed %s", e.toString()));
@@ -477,6 +480,22 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
             }
         }
     }
+
+    public String getAddressPlayUrl(Context context) {
+        WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager != null) {
+            int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
+            // 格式化IP地址
+            return String.format("http://%d.%d.%d.%d:%d/output.m3u8",
+                    (ipAddress & 0xff),
+                    (ipAddress >> 8 & 0xff),
+                    (ipAddress >> 16 & 0xff),
+                    (ipAddress >> 24 & 0xff),
+                    nHttpPort);
+        }
+        return "";
+    }
+
     /**
      * 停止
      */
@@ -534,14 +553,20 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
      * 播放视频
      */
     private void play() {
-        @DLANPlayState.DLANPlayStates int currentState = mClingPlayControl.getCurrentState();
+        String strUrl = getAddressPlayUrl(this);
+        if (strUrl.isEmpty()) {
+            Toast.makeText(MainActivity.this, "获取wifi地址失败" , Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Log.i(TAG, "play " + strUrl);
 
+
+        @DLANPlayState.DLANPlayStates int currentState = mClingPlayControl.getCurrentState();
         /**
          * 通过判断状态 来决定 是继续播放 还是重新播放
          */
-
         if (currentState == DLANPlayState.STOP || true) {
-            mClingPlayControl.playNew(Config.TEST_URL, new ControlCallback() {
+            mClingPlayControl.playNew(strUrl, new ControlCallback() {
 
                 @Override
                 public void success(IResponse response) {
