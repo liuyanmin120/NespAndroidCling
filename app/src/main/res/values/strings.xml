@@ -5,10 +5,10 @@
     <string name="progress">进度</string>
     <string name="volume">音量</string>
     <string name="mute">静音</string>
-    <string name="play">播放</string>
-    <string name="pause">暂停</string>
-    <string name="stop">停止</string>
-    <string name="download">下载</string>
-    <string name="addMark">加水印</string>
+    <string name="play">投屏播放</string>
+    <string name="pause">投屏暂停</string>
+    <string name="stop">投屏停止</string>
+    <string name="download">下载视频</string>
+    <string name="addMark">生成水印</string>
     <string name="markPlaceholder">水印内容</string>
 </resources>
