@@ -38,7 +38,10 @@ import org.fourthline.cling.model.meta.Device;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Collection;
+import java.util.Date;
+import java.util.Locale;
 
 
 import io.microshow.rxffmpeg.RxFFmpegInvoke;
@@ -159,6 +162,13 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
     private void initLocalVideo() {
         RxFFmpegInvoke.getInstance().setDebug(true);
+        Date now = new Date();
+        // 创建一个SimpleDateFormat对象，并指定时间格式
+        // 例如："yyyy-MM-dd HH:mm:ss" 表示年-月-日 时:分:秒
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault());
+        // 使用SimpleDateFormat的format方法将Date对象格式化为字符串
+        String formattedDate = sdf.format(now);
+
         downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
         // 服务器端口
         int port = 22120;
@@ -356,6 +366,9 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                         file.delete();
                     }
                 }
+            }
+            if (!dir.exists()) {
+                dir.mkdirs();
             }
             String sCommand = "ffmpeg -y -i https://dist.qianxueyunke.com/data/User/admin/home/%E5%AE%89%E8%A3%85%E5%8C%85/share/output.mp4 -c:v libx264 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
                     + dir.toString() + "/output%06d.ts " + dir.toString() + "/output.m3u8";
