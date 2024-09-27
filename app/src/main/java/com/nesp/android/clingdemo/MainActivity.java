@@ -348,8 +348,14 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         if (EasyPermissions.hasPermissions(this, REQUESTED_PERMISSIONS)) {
 
             File dir = new File(downloadPath);
-            if (!dir.exists()) {
-                dir.mkdirs();
+            // clear
+            if (dir.isDirectory()) {
+                File[] files = dir.listFiles();
+                for (File file : files) {
+                    if (!file.isDirectory()) { // 确保是文件而非目录
+                        file.delete();
+                    }
+                }
             }
             String sCommand = "ffmpeg -y -i https://dist.qianxueyunke.com/data/User/admin/home/%E5%AE%89%E8%A3%85%E5%8C%85/share/output.mp4 -c:v libx264 -c:a aac -ar 44100 -ac 1 -f hls -hls_time 10 -hls_list_size 0 -hls_segment_filename "
                     + dir.toString() + "/output%06d.ts " + dir.toString() + "/output.m3u8";
