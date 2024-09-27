@@ -169,7 +169,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         // 使用SimpleDateFormat的format方法将Date对象格式化为字符串
         String formattedDate = sdf.format(now);
 
-        downloadPath = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "Download" + File.separator + "qxcDownload";
+        //downloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + File.separator + "qxcDownload";
+        downloadPath = this.getExternalCacheDir() + File.separator + "qxcDownload";
         // 服务器端口
         int port = 22120;
 
