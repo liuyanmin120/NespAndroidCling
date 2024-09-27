@@ -83,7 +83,10 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private SeekBar mSeekProgress;
     private SeekBar mSeekVolume;
     private Switch mSwitchMute;
+    private Button mBtnDownload;
+    private Button mBtnAddMark;
     private EditText mEdtMark;
+
 
     private BroadcastReceiver mTransportStateBroadcastReceiver;
     private ArrayAdapter<ClingDevice> mDevicesAdapter;
@@ -223,6 +226,8 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         mSeekProgress = findViewById(R.id.seekbar_progress);
         mSeekVolume = findViewById(R.id.seekbar_volume);
         mSwitchMute = findViewById(R.id.sw_mute);
+        mBtnDownload = findViewById(R.id.bt_download);
+        mBtnAddMark = findViewById(R.id.bt_addMark);
         mEdtMark = findViewById(R.id.textMark);
 
         mDevicesAdapter = new DevicesAdapter(mContext);
@@ -357,13 +362,18 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(MainActivity.this, "下载完成", Toast.LENGTH_SHORT).show();
+                            mBtnDownload.setText(String.format("下载完成"));
                         }
                     });
                 }
                 @Override
                 public void onProgress(int progress, long progressTime) {
-
+                    mainHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mBtnDownload.setText(String.format("下载中 %d%%", progress));
+                        }
+                    });
                 }
                 @Override
                 public void onCancel() {
@@ -374,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                     mainHandler.post(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(MainActivity.this, "下载失败: " + message, Toast.LENGTH_SHORT).show();
+                            mBtnDownload.setText(String.format("下载失败 %s", message));
                         }
                     });
                 }
@@ -442,10 +452,12 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
         if (files != null) {
             File tempFile = new File(downloadPath, "temp.ts");
             for (int i = 0; i < files.length; i++) {
-                if (i % 3 == 0) { // 每隔3个文件处理一次
+                if (i % 2 == 1) { // 每隔3个文件处理一次
+                    int nPos = (int) ((i * 100.0) / files.length);
+                    mBtnAddMark.setText(String.format("进度 %d%%", nPos));
                     File sourceFile = files[i];
                     // 构造 FFmpeg 命令
-                    String sCommand = String.format("-y -i %s -i %s -filter_complex overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))' %s",
+                    String sCommand = String.format("-y -i %s -i %s -filter_complex overlay=x='abs(main_w-main_w*mod(t/10,2))':y='abs(main_h*mod(t/20,1))' -c:v libx264 -crf 23 %s",
                             sourceFile.getAbsolutePath(), fileMark, tempFile.getAbsolutePath());
                     String[] commands = sCommand.split(" ");
                     Log.d(TAG, String.format("ffmpeg command %s", sCommand));
@@ -470,7 +482,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
                             mainHandler.post(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Toast.makeText(MainActivity.this, "下载失败: " + message, Toast.LENGTH_SHORT).show();
+                                    mBtnAddMark.setText(String.format("添加水印失败 %s", message));
                                 }
                             });
                         }
@@ -478,6 +490,7 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
 
                 }
             }
+            mBtnAddMark.setText(String.format("水印完成"));
         }
     }
 
@@ -555,10 +568,11 @@ public class MainActivity extends AppCompatActivity implements SwipeRefreshLayou
     private void play() {
         String strUrl = getAddressPlayUrl(this);
         if (strUrl.isEmpty()) {
-            Toast.makeText(MainActivity.this, "获取wifi地址失败" , Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "获取wifi地址失败" , Toast.LENGTH_LONG).show();
             return;
         }
         Log.i(TAG, "play " + strUrl);
+        Toast.makeText(MainActivity.this, strUrl , Toast.LENGTH_LONG).show();
 
 
         @DLANPlayState.DLANPlayStates int currentState = mClingPlayControl.getCurrentState();
